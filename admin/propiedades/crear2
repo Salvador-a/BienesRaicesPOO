@@ -1,0 +1,102 @@
+<?php
+require '../../includes/app.php';
+
+use App\Propiedad;
+use Intervention\Image\ImageManagerStatic as Image;
+
+estaAutentificado();
+
+
+$db = conectarDB();
+
+$propiedad = new Propiedad;
+
+// Consultar para obtener los valores 
+$consulta = "SELECT * FROM  vendedores";
+$resultado = mysqli_query($db, $consulta);
+
+
+// Arreglo con mensaje de erro
+$errores = Propiedad::getErrores();
+
+
+// Ejecuta el codigo despues de que el usuario envia el formulario
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    /**Crea una nueva instamcia */
+    $propiedad = new Propiedad($_POST);
+
+    /** SUBIDA DE ARCHIVO */
+
+
+
+    //Generar un nombre unico 
+    $nombreImagen = md5(uniqid(rand(), true)) . ".jpg";
+
+    // Setear la imagen
+    //Realiza un resize a la imagen con intervention
+    //Realiza un resize a la imagen con intervention
+if ($_FILES['imagen']['tmp_name']) {
+    $image = Image::make($_FILES['imagen']['tmp_name'])->fit(800, 600);
+    $propiedad->setImagen($nombreImagen);
+}
+
+
+
+    //Validar
+    $errores = $propiedad->validar();
+
+    if (empty($errores)) {
+        // Crear carpeta       
+
+        if (!is_dir(CARPETA_IMAGENES)) {
+            mkdir(CARPETA_IMAGENES);
+        }
+
+        //guarda la imagen en el servidor
+        $image->save(CARPETA_IMAGENES . $nombreImagen);
+
+        // Guarda en la base de datos
+        $resultado = $propiedad->guardar();
+
+        // Mensaje de exito o aguardar
+        if ($resultado) {
+            // Redirecion al usuario.
+            header('Location: /bienesraices/admin?resultado=1 ');
+            exit;
+        }
+    }
+}
+
+
+
+
+
+incluirTemplate('header');
+?>
+
+<main class="contenedor seccion">
+    <h1>Crear</h1>
+    <a href="/bienesraices/admin" class="boton boton-verde">Volver</a>
+
+    <?php foreach ($errores as $error) : ?>
+        <div class="alerta error">
+            <?php echo $error; ?>
+        </div>
+    <?php endforeach; ?>
+
+    <form class="formulario" method="POST" action="/bienesraices/admin/propiedades/crear.php" enctype="multipart/form-data">
+
+        <?php include '../../includes/templates/formulario_propiedades.php'; ?>
+        
+
+        <input type="submit" value="Crear Propiedad" class="boton boton-verde">
+
+    </form>
+
+</main>
+
+<?php
+incluirTemplate('footer');
+
+?>
